@@ -1,64 +1,74 @@
-import  sqlite3  from "sqlite3";
-import {debug} from "./debug.js";
+import {PrismaClient} from '@prisma/client'
+
+const prisma = new PrismaClient()
 
 
-export const db = new sqlite3.Database('db.sqlite', (err) => {
-    if (err) {
-        console.error(err.message);
-    }
-    console.log('Connected to the prompts database.');
-});
+
+
 // create export function to get the prompts from the database
-export function getPrompts() {
-     return new Promise((resolve, reject) => {
-    db.each(`SELECT * FROM prompts ORDER BY id DESC LIMIT 1`, (err, row) => {
-      if (err) {
-        reject(err);
-      }
-      prompt = row.prompt;
-      resolve(prompt);
-    });
-  });
-  }
-  export const storeUser = (user) => {
-    console.log(user);
-  
-    // check if the user exists in the database
-    db.get('SELECT * FROM users WHERE user = ?', user, (err, row) => {
-      if (err) {
-        throw new Error(`Error retrieving user: ${err}`);
-      }
-  
-      // if the user is not found in the database
-      if (!row) {
-        console.log('User not found in the database');
-        db.run('INSERT INTO users (user) VALUES (?)', user);
-      }
-    });
-  };
-
-  export function storePrompt(promptData, user, callback) {
-    const prompt = promptData;
-   // save the prompt to the database
-    db.run('INSERT INTO prompts (prompt) VALUES (?)', prompt, (err) => {
-      if(err){
-        debug(err);
-      }
-      // get the id of the prompt
-      db.get('SELECT * FROM prompts WHERE prompt = ?', prompt, (err, row) => {
-        if (err) {
-          throw new Error(`Error retrieving prompt: ${err}`);
+export async function getPrompts(user) {
+ // get the user id
+    const userExists = await prisma.user.findFirst({
+        where: {
+            name: user
         }
-        // get the id of the user
-        db.get('SELECT * FROM users WHERE user = ?', user, (err, row) => {
-          if (err) {
-            throw new Error(`Error retrieving user: ${err}`);
-          }
-          // save the user prompt to the database
-          db.run('INSERT INTO user_prompts (user_id, prompt_id) VALUES (?, ?)', row.id, row.id);
-        });
-      }
-      );
     });
+    // return the prompts one last  entry
+    const userId = userExists.id;
+    const prompts = await prisma.user.findUnique({
+        where: {
+            id: userId
+        },
+        include: {
+            posts: true
+
+        },
+    });
+    return prompts.posts[prompts.posts.length - 1];
+    }
+
+  export const storeUser = async  (user) => {
+  // check if the user exists by name
+    const userExists = await prisma.user.findFirst({
+        where: {
+            name: user
+
+        }
+    })
+    if(!userExists){
+        await prisma.user.create({
+            data: {
+                name: user,
+            }
+        })
+
+    }
+   //
+  };
+  export async function storePrompt(promptData, user) {
+    const prompt = promptData;
+   // create a new prompt and add userid
+    const userExists = await prisma.user.findFirst({
+        where: {
+            name: user
+        }
+    });
+    // get the user id
+    const userId = userExists.id;
+    if(userExists){
+        const newPrompt = await prisma.prompt.create({
+            data: {
+                title: prompt,
+                author: {
+                    connect: {
+                        id: userId
+                    }
+                }
+            }
+        });
+
+    }
+
+
     
   }

@@ -7,9 +7,7 @@ import figlet from 'figlet';
 import {createSpinner} from 'nanospinner';
 import { Configuration,OpenAIApi } from 'openai';
 import edgeCase from './edgeCase.js';
-import  sqlite3  from 'sqlite3';
 import dotenv from 'dotenv';
-import {db} from './database.js';
 import { getPrompts,storePrompt,storeUser} from './database.js';
 import { debug } from './debug.js';
 
@@ -19,17 +17,6 @@ dotenv.config();
 // add the user model to the database
 
 
-
-db.serialize(() => {
-//    db.run('CREATE TABLE IF NOT EXISTS prompts (id INTEGER PRIMARY KEY AUTOINCREMENT, prompt TEXT, user TEXT)');
-// update to create a table for the user
-db.run('CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, user TEXT)');
-db.run('CREATE TABLE IF NOT EXISTS prompts (id INTEGER PRIMARY KEY AUTOINCREMENT, prompt TEXT)');
-db.run('CREATE TABLE IF NOT EXISTS user_prompts (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, prompt_id INTEGER)');
-
-
-
-});
 
 
 const configuration  = new Configuration({
@@ -58,7 +45,7 @@ async function welcome(){
 
 
 export default async function askQuestions(){
-    storeUser(USER);
+    await storeUser(USER);
     const answers = await inquirer.prompt(
         {
             type: 'input',
@@ -76,7 +63,7 @@ console.log(chalk.blue('Thinking...'));
 let getLastPrompt =   await getPrompts();
 const completion = await openai.createCompletion({
     model: "text-davinci-003",
-    prompt: getLastPrompt + answers.question,
+    prompt: getLastPrompt.title + answers.question,
     max_tokens: 100,
     n: 1,
     stop: "",

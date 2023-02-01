@@ -16,7 +16,7 @@ export default async function edgeCase(answers) {
     }
     if(answers.question.toLowerCase() === 'help'){
         // console.log('\x1Bc');
-         getPrompts()
+         await getPrompts()
         await askQuestions();
     }
     // if the question is a space bar enter or nothing
